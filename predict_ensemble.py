@@ -120,7 +120,14 @@ def _build_model_config(seq_len: int, num_class: int = 2) -> SimpleNamespace:
 def _load_single_model(model_path: Path, device: torch.device, seq_len: int) -> torch.nn.Module:
     cfg = _build_model_config(seq_len=seq_len, num_class=2)
     model = LEADv2.Model(cfg).to(device)
-    ckpt = torch.load(model_path, map_location=device)
+    try:
+        ckpt = torch.load(model_path, map_location=device, weights_only=True)
+    except TypeError:
+        # Fallback for older torch versions that do not support weights_only.
+        ckpt = torch.load(model_path, map_location=device)
+
+    if isinstance(ckpt, dict) and "state_dict" in ckpt and isinstance(ckpt["state_dict"], dict):
+        ckpt = ckpt["state_dict"]
 
     # Handle DataParallel / SWA style checkpoints.
     cleaned = {}
@@ -128,7 +135,7 @@ def _load_single_model(model_path: Path, device: torch.device, seq_len: int) -> 
         if k == "n_averaged":
             continue
         new_key = k
-        if new_key.startswith("module."):
+        while new_key.startswith("module."):
             new_key = new_key[len("module."):]
         cleaned[new_key] = v
 
@@ -180,7 +187,9 @@ def preprocess_edf(
             + ".\nProvide EDF with 10-20 channels matching training setup."
         )
 
-    raw.pick_channels(TARGET_CHANNELS, ordered=True)
+    raw.pick(TARGET_CHANNELS)
+    # Enforce exact channel order expected by the model.
+    raw.reorder_channels(TARGET_CHANNELS)
     raw.resample(sfreq=target_fs, verbose="ERROR")
     data = raw.get_data()  # (C, T)
     data = data.T.astype(np.float32)  # (T, C)
