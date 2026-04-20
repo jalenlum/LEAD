@@ -7,3 +7,5 @@ results/
 dataset/
 # plots
 /plots/
+
+/venv/
