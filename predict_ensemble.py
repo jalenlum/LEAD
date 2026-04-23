@@ -48,7 +48,12 @@ CHANNEL_ALIASES: Dict[str, str] = {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="LEADv2 AD-vs-HC ensemble inference from EDF.")
-    parser.add_argument("--edf_path", type=str, required=True, help="Path to a single EDF file.")
+    parser.add_argument(
+        "--edf_path",
+        type=str,
+        required=True,
+        help="Path to a single EDF file (e.g. patient_data/sub-001_task-eyesclosed_eeg.edf).",
+    )
     parser.add_argument(
         "--checkpoint_root",
         type=str,

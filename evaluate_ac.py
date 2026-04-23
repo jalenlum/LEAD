@@ -7,6 +7,11 @@ import torch
 
 import predict_ensemble as pe
 
+# Resolve defaults relative to this script so commands work from any cwd.
+_SCRIPT_DIR = Path(__file__).resolve().parent
+_DEFAULT_PATIENT_DIR = _SCRIPT_DIR / "patient_data"
+_DEFAULT_LABELS_CSV = _DEFAULT_PATIENT_DIR / "labels_ac.csv"
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -15,14 +20,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--labels_csv",
         type=str,
-        required=True,
-        help="CSV path with at least columns: participant_id, Group",
+        default=str(_DEFAULT_LABELS_CSV),
+        help="CSV path with at least columns: participant_id, Group (default: patient_data/labels_ac.csv next to this script).",
     )
     parser.add_argument(
         "--edf_dir",
         type=str,
-        default=".",
-        help="Directory containing EDF files named like sub-001_task-eyesclosed_eeg.edf",
+        default=str(_DEFAULT_PATIENT_DIR),
+        help="Directory containing EDF files named like sub-001_task-eyesclosed_eeg.edf (default: patient_data/).",
     )
     parser.add_argument(
         "--edf_suffix",
@@ -109,6 +114,8 @@ def main() -> None:
     args = parse_args()
     labels_csv = Path(args.labels_csv)
     edf_dir = Path(args.edf_dir)
+    if not labels_csv.is_file():
+        raise FileNotFoundError(f"Labels CSV not found: {labels_csv}")
     checkpoint_root = Path(args.checkpoint_root)
     seed_folders = [s.strip() for s in args.seed_folders.split(",") if s.strip()]
     notch = None if args.notch == 0 else args.notch
